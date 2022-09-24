@@ -13,7 +13,7 @@ public struct InSequence: AnimationRig {
     }
 
     public func create(at time: Double, with position: simd_float3, and orientation: simd_quatf) -> AnimationRunner {
-        return Runner(rigs: rigs, at: time)
+        return Runner(startPosition: position, startOrientation: orientation, rigs: rigs, at: time)
     }
 
 
@@ -21,46 +21,71 @@ public struct InSequence: AnimationRig {
 
         private var runner: AnimationRunner?
         private var pendingRigs: [AnimationRig]
+        private var lastKnownPosition: simd_float3
+        private var lastKnownOrientation: simd_quatf
 
-        init(rigs: [AnimationRig], at time: Double) {
 
+        init(startPosition: simd_float3, startOrientation: simd_quatf, rigs: [AnimationRig], at time: Double) {
+            self.lastKnownPosition = startPosition
+            self.lastKnownOrientation = startOrientation
             self.pendingRigs = rigs
             self.runner = nil
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
-
+        func apply(at time: Double) -> AnimationResult {
             if self.runner == nil {
-                guard let rig = self.pendingRigs.popLast() else {
-                    return .finished(position: position, orientaion: orientation, atTime: time)
+                if pendingRigs.isEmpty {
+                    return .finishedNone(atTime: time)
                 }
-
-                self.runner = rig.create(at: time, with: position, and: orientation)
+                let rig = self.pendingRigs.remove(at: pendingRigs.startIndex)
+                self.runner = rig.create(at: time, with: lastKnownPosition, and: lastKnownOrientation)
             }
 
             guard let runner else {
                 fatalError("trying to run a sequence with no runner")
             }
 
-            let result = runner.apply(to: position, and: orientation, with: time)
+            let result = runner.apply(at: time)
 
             switch result {
-                case .running:
+                case .runningNone:
                     return result
-                case .finished(let position, let orientaion, let finishTime):
+                case .runningPosition(let position):
+                    lastKnownPosition = position
+                    return result
+                case .runningOrientation(let orientation):
+                    lastKnownOrientation = orientation
+                    return result
+                case .runningPositionOrientation(let position, let orientation):
+                    lastKnownPosition = position
+                    lastKnownOrientation = orientation
+                    return result
+                case .finishedNone(let finishTime):
+                    return dequeueRunner(at: finishTime)
+                case .finishedPosition(let position, let finishTime):
+                    lastKnownPosition = position
+                    return dequeueRunner(at: finishTime)
+                case .finishedOrientation(let orientation, let finishTime):
+                    lastKnownOrientation = orientation
+                    return dequeueRunner(at: finishTime)
+                case .finishedPositionOrientation(let position, let orientation, let finishTime):
+                    lastKnownPosition = position
+                    lastKnownOrientation = orientation
+                    return dequeueRunner(at: finishTime)
+            }
+        }
 
-                    guard !pendingRigs.isEmpty else {
-                        return result
-                    }
-
-                    let nextRig = pendingRigs.remove(at: pendingRigs.startIndex)
-
-                    self.runner = nextRig.create(at: finishTime, with: position, and: orientation)
-
-                    // recurse until all elements are done for this time
-                    return self.apply(to: position, and: orientaion, with: time)
+        private func dequeueRunner(at time: Double) -> AnimationResult {
+            if pendingRigs.isEmpty {
+                return .finishedNone(atTime: time)
             }
 
+            let nextRig = pendingRigs.remove(at: pendingRigs.startIndex)
+
+            self.runner = nextRig.create(at: time, with: lastKnownPosition, and: lastKnownOrientation)
+
+            // recurse until all elements are done for this time
+            return self.apply(at: time)
         }
     }
 

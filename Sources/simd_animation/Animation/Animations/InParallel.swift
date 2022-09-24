@@ -25,40 +25,61 @@ public struct InParallel: AnimationRig {
 
         private let runners: [AnimationRunner]
 
+
         init(runners: [AnimationRunner]) {
             self.runners = runners
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
+        func apply(at time: Double) -> AnimationResult {
 
-
-            let ((endPosition, endOrientation), results) = runners.sweep((position, orientation)) { positionOrientation, runner in
-                let result = runner.apply(to: positionOrientation.0, and: positionOrientation.1, with: time)
-
-                let newPosition: simd_float3
-                let newOrientation: simd_quatf
-                switch result {
-                    case .running(let position, let orientation):
-                        newPosition = position
-                        newOrientation = orientation
-                    case .finished(let position, let orientation, _):
-                        newPosition = position
-                        newOrientation = orientation
-                }
-                return ((newPosition, newOrientation), result)
+            if runners.isEmpty {
+                return .finishedNone(atTime: time)
             }
 
-            var lastFinishTime: Double = 0
-            for result in results {
-                switch result {
-                    case .running(_, _):
-                        return .running(position: endPosition, orientaion: endOrientation)
-                    case .finished(_, _, let finishTime):
-                        lastFinishTime = max(lastFinishTime, finishTime)
+            var lastKnownPosition: simd_float3?
+            var lastKnownOrientation: simd_quatf?
+
+            let results = runners.map{ runner in
+                return runner.apply(at: time)
+            }
+
+            results.forEach{result in
+                lastKnownPosition = result.position ?? lastKnownPosition
+                lastKnownOrientation = result.orientation ?? lastKnownOrientation
+            }
+
+            let allFinished = results.allSatisfy(\.isFinished)
+
+            if allFinished {
+
+                guard let lastFinishTime = results.map(\.finishingTime).compactMap({$0}).max() else {
+                    fatalError("there should be a maximum finish time")
+                }
+
+                if let lastKnownPosition, let lastKnownOrientation {
+                    return .finishedPositionOrientation(position: lastKnownPosition,
+                                                        orientation: lastKnownOrientation,
+                                                        atTime: lastFinishTime)
+                } else if let lastKnownPosition {
+                    return .finishedPosition(position: lastKnownPosition, atTime: lastFinishTime)
+                } else if let lastKnownOrientation {
+                    return .finishedOrientation(orientation: lastKnownOrientation, atTime: lastFinishTime)
+                }else {
+                    return .finishedNone(atTime: lastFinishTime)
                 }
             }
 
-            return .finished(position: endPosition, orientaion: endOrientation, atTime: lastFinishTime)
+            if let lastKnownPosition, let lastKnownOrientation {
+                return .runningPositionOrientation(position: lastKnownPosition,
+                                                    orientation: lastKnownOrientation)
+            } else if let lastKnownPosition {
+                return .runningPosition(position: lastKnownPosition)
+            } else if let lastKnownOrientation {
+                return .runningOrientation(orientation: lastKnownOrientation)
+            }else {
+                return .runningNone
+            }
+
 
         }
     }

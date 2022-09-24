@@ -56,14 +56,15 @@ public struct LinearTranslation: AnimationRig {
             self.endPosition = endPosition
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
+        func apply(at time: Double) -> AnimationResult {
+            
             let t = ((time - startTime) / (endTime - startTime)).clamped(to: 0...1)
-            let newPosition = simd_mix(startPosition, endPosition, [Float(t),Float(t),Float(t)])
+            let position = simd_mix(startPosition, endPosition, [Float(t),Float(t),Float(t)])
 
             if time >= endTime {
-                return .finished(position: newPosition, orientaion: orientation, atTime: endTime)
+                return .finishedPosition(position: position, atTime: time)
             }else{
-                return .running(position: newPosition, orientaion: orientation)
+                return .runningPosition(position: position)
             }
         }
     }

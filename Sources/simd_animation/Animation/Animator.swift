@@ -6,45 +6,55 @@ public class Animator {
     //TODO: Check out these easing functions
     // https://github.com/danro/jquery-easing/blob/master/jquery.easing.js
 
-    private var queue: [AnimationRig]
     private var currentAnimation: AnimationRunner
 
     public init() {
-        self.queue = []
-        self.currentAnimation = Idle().create(at: Date().timeIntervalSince1970, with: simd_float3(), and: simd_quatf())
+        self.currentAnimation = Idle().create()
     }
 
-    public func enqueue(_ animation: AnimationRig) {
-        queue.insert(animation, at: queue.startIndex)
+    public func enqueue(from position: simd_float3, and orientation: simd_quatf, _ animation: AnimationRig) {
+        // if there are already something queued we need to put that into the sequence
+        currentAnimation = InSequence(rigs: [animation]).create(at: 0, with: position, and: orientation)
     }
 
-    public func enqueueSequence(@AnimationArrayBuilder _ builder: () -> [AnimationRig]) {
+    public func enqueueSequence(from position: simd_float3,
+                                and orientation: simd_quatf,
+                                @AnimationArrayBuilder _ builder: () -> [AnimationRig]) {
         let rigs = builder()
-        queue.insert( InSequence(rigs: rigs), at: queue.startIndex)
+        self.enqueue(from: position, and: orientation, InSequence(rigs: rigs))
     }
 
-    public func enqueueInParallel(@AnimationArrayBuilder _ builder: () -> [AnimationRig]) {
-        let rigs = builder()
-        queue.insert( InParallel(rigs: rigs), at: queue.startIndex)
-    }
+    public func tick(time: Double,
+                     updatePosition: (simd_float3) -> Void,
+                     updateOrientation: (simd_quatf) -> Void ) -> Void {
 
-    public func tick(time: Double, with position: simd_float3, and orientation: simd_quatf) -> (simd_float3, simd_quatf) {
 
-        while true {
-            let state = currentAnimation.apply(to: position, and: orientation, with: time)
+        let state = currentAnimation.apply(at: time)
 
-            switch state {
-                case .running(let newPosition, let newOrientation):
-                    return (newPosition, newOrientation)
-                case .finished(let newPosition, let newOrientation, let finishTime):
-                    guard let newAnimation = queue.popLast() else {
-                        self.currentAnimation = Idle().create(at: finishTime, with: newPosition, and: orientation)
-                        return (newPosition, newOrientation)
-                    }
-
-                    self.currentAnimation = newAnimation.create(at: finishTime, with: newPosition, and: orientation)
-            }
+        switch state {
+            case .runningPositionOrientation(let position, let orientation):
+                updatePosition(position)
+                updateOrientation(orientation)
+            case .finishedPositionOrientation(let position, let orientation, _):
+                updatePosition(position)
+                updateOrientation(orientation)
+                self.currentAnimation = Idle().create()
+            case .runningPosition(let position):
+                updatePosition(position)
+            case .finishedPosition(let position, _):
+                updatePosition(position)
+                self.currentAnimation = Idle().create()
+            case .runningOrientation(let orientation):
+                updateOrientation(orientation)
+            case .finishedOrientation(let orientation, _):
+                updateOrientation(orientation)
+                self.currentAnimation = Idle().create()
+            case .finishedNone(_):
+                self.currentAnimation = Idle().create()
+            case .runningNone:
+                break
         }
+
     }
 }
 
@@ -54,37 +64,98 @@ public protocol AnimationRig {
 
 
 public protocol AnimationRunner {
-    func apply(to position: simd_float3, and orientation: simd_quatf, with time: Double) -> AnimationResult
+    func apply(at time: Double) -> AnimationResult
 }
 
 public enum AnimationResult {
-    case running(position: simd_float3, orientaion: simd_quatf)
-    case finished(position: simd_float3, orientaion: simd_quatf, atTime: Double)
+    case runningPositionOrientation(position: simd_float3, orientation: simd_quatf)
+    case finishedPositionOrientation(position: simd_float3, orientation: simd_quatf, atTime: Double)
+
+    case runningPosition(position: simd_float3)
+    case finishedPosition(position: simd_float3, atTime: Double)
+
+    case runningOrientation(orientation: simd_quatf)
+    case finishedOrientation(orientation: simd_quatf, atTime: Double)
+
+    case runningNone
+    case finishedNone(atTime: Double)
+
 
     var isFinished: Bool {
         switch self {
-            case .finished:
+            case .runningPositionOrientation:
+                return false
+            case .finishedPositionOrientation:
                 return true
-            case .running:
+            case .runningPosition:
+                return false
+            case .finishedPosition:
+                return true
+            case .runningOrientation:
+                return false
+            case .finishedOrientation:
+                return true
+            case .finishedNone:
+                return true
+            case .runningNone:
                 return false
         }
     }
 
-    var position: simd_float3 {
+    var finishingTime: Double? {
         switch self {
-            case .finished(let position, _, _):
-                return position
-            case .running(let position, _):
-                return position
+            case .runningPositionOrientation, .runningPosition, .runningOrientation, .runningNone:
+                return nil
+            case .finishedPositionOrientation(_, _, let time):
+                return time
+            case .finishedPosition(_, let time):
+                return time
+            case .finishedOrientation(_, let time):
+                return time
+            case .finishedNone(let time):
+                return time
         }
     }
 
-    var orientation: simd_quatf {
+    var position: simd_float3? {
         switch self {
-            case .finished(_, let orientation, _):
+            case .runningPositionOrientation:
+                return nil
+            case .finishedPositionOrientation(let position, _, _):
+                return position
+            case .runningPosition(let position):
+                return position
+            case .finishedPosition(let position, _):
+                return position
+            case .runningOrientation:
+                return nil
+            case .finishedOrientation:
+                return nil
+            case .runningNone:
+                return nil
+            case .finishedNone:
+                return nil
+        }
+    }
+
+    var orientation: simd_quatf? {
+        switch self {
+            case .runningPositionOrientation(_, let orientation):
                 return orientation
-            case .running(_, let orientation):
+            case .finishedPositionOrientation(_, let orientation, _):
                 return orientation
+            case .runningPosition:
+                return nil
+            case .finishedPosition:
+                return nil
+            case .runningOrientation(let orientation):
+                return orientation
+            case .finishedOrientation(let orientation, _):
+                return orientation
+            case .runningNone:
+                return nil
+            case .finishedNone:
+                return nil
         }
     }
 }

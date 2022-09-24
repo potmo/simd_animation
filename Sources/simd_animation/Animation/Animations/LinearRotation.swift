@@ -43,14 +43,14 @@ public struct LinearRotation: AnimationRig {
             self.endOrientation = endOrientation
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
+        func apply(at time: Double) -> AnimationResult {
             let t = ((time - startTime) / (endTime - startTime)).clamped(to: 0...1)
             let orientation = simd_slerp(startOrientation, endOrientation, Float(t))
 
-            if t >= 1 {
-                return .finished(position: position, orientaion: orientation, atTime: time)
+            if time >= endTime {
+                return .finishedOrientation(orientation: orientation, atTime: endTime)
             }else{
-                return .running(position: position, orientaion: orientation)
+                return .runningOrientation(orientation: orientation)
             }
         }
     }

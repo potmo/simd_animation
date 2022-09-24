@@ -20,9 +20,9 @@ public struct Call: AnimationRig {
             self.callback = callback
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
+        func apply(at time: Double) -> AnimationResult {
             self.callback()
-            return .finished(position: position, orientaion: orientation, atTime: time)
+            return .finishedNone(atTime: time)
         }
     }
 }

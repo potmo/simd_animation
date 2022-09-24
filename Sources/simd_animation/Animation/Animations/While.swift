@@ -20,11 +20,11 @@ public struct While: AnimationRig {
             self.evaluator = callback
         }
 
-        func apply(to position: simd_float3, and  orientation: simd_quatf, with time: Double) -> AnimationResult {
+        func apply(at time: Double) -> AnimationResult {
             if self.evaluator() {
-                return .finished(position: position, orientaion: orientation, atTime: time)
+                return .finishedNone(atTime: time)
             }else {
-                return .running(position: position, orientaion: orientation)
+                return .runningNone
             }
 
         }
