@@ -61,6 +61,14 @@ class AnimatedArrow {
 
             Delay(duration: 1.0)
 
+            CubicTranslation(duration: 3, from: [100, 100, 0], via: [200, 100, 0], and: [100, 200, 0], to: [200, 300,0])
+
+            Delay(duration: 1.0)
+
+            QuadraticTranslation(duration: 3, from: [200, 300, 0], via: [300, 150, 0], to: [100, 100,0])
+
+            Delay(duration: 1.0)
+
             LinearTranslation(duration: 1, from: [100,100,0], to: [200,100,0], using: .easeOut(.elastic()))
 
             Delay(duration: 1.0)
