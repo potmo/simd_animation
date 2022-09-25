@@ -83,6 +83,9 @@ class AnimatedArrow {
 
             }
             Delay(duration: 0.5)
+
+            LinearRotation(duration: 1, to: simd_quatf(angle: 0, axis: [0,0,1]), using: .easeOut(.elastic(oscillations: 2, springiness: 3)))
+            Delay(duration: 0.5)
             
             LinearTranslation(duration: 3, from: [100,100,0], to: [200,100,0], using: .easeInOut(.sine))
             Delay(duration: 0.5)
@@ -120,6 +123,9 @@ class AnimatedArrow {
             }
 
 
+            Call{
+                self.color = CGColor(red: 0, green: 1, blue: 0, alpha: 1)
+            }
             
 
         }
