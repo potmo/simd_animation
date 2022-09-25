@@ -21,11 +21,11 @@ public struct Delay: AnimationRig {
             self.endTime = endTime
         }
 
-        func apply(at time: Double) -> AnimationResult {
+        func apply(at time: Double, setPosition: (simd_float3) -> Void, setOrientation: (simd_quatf) -> Void) -> AnimationResult {
             if time >= endTime {
-                return .finishedNone(atTime: time)
+                return .finished(atTime: endTime)
             }else{
-                return .runningNone
+                return .running
             }
         }
     }

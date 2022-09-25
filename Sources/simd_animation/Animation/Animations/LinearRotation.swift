@@ -68,17 +68,18 @@ public struct LinearRotation: AnimationRig {
             self.endOrientation = endOrientation
         }
 
-        func apply(at time: Double) -> AnimationResult {
+        func apply(at time: Double, setPosition: (simd_float3) -> Void, setOrientation: (simd_quatf) -> Void) -> AnimationResult {
             let t = ((time - startTime) / (endTime - startTime)).clamped(to: 0...1)
             let te = easing.map(t)
 
             //TODO: add possibility to rotate shortest and longest
             let orientation = simd_slerp(startOrientation, endOrientation, Float(te))
+            setOrientation(orientation)
 
             if time >= endTime {
-                return .finishedOrientation(orientation: orientation, atTime: endTime)
+                return .finished(atTime: endTime)
             }else{
-                return .runningOrientation(orientation: orientation)
+                return .running
             }
         }
     }

@@ -30,23 +30,29 @@ public struct InParallel: AnimationRig {
             self.runners = runners
         }
 
-        func apply(at time: Double) -> AnimationResult {
+        func apply(at time: Double, setPosition: (simd_float3) -> Void, setOrientation: (simd_quatf) -> Void) -> AnimationResult {
 
             if runners.isEmpty {
-                return .finishedNone(atTime: time)
+                return .finished(atTime: time)
             }
 
             var lastKnownPosition: simd_float3?
             var lastKnownOrientation: simd_quatf?
 
             let results = runners.map{ runner in
-                return runner.apply(at: time)
+                return runner.apply(at: time,
+                                    setPosition: { position in lastKnownPosition = position},
+                                    setOrientation: {orienation in lastKnownOrientation = orienation})
             }
 
-            results.forEach{result in
-                lastKnownPosition = result.position ?? lastKnownPosition
-                lastKnownOrientation = result.orientation ?? lastKnownOrientation
+            if let lastKnownPosition {
+                setPosition(lastKnownPosition)
             }
+
+            if let lastKnownOrientation {
+                setOrientation(lastKnownOrientation)
+            }
+
 
             let allFinished = results.allSatisfy(\.isFinished)
 
@@ -56,49 +62,13 @@ public struct InParallel: AnimationRig {
                     fatalError("there should be a maximum finish time")
                 }
 
-                if let lastKnownPosition, let lastKnownOrientation {
-                    return .finishedPositionOrientation(position: lastKnownPosition,
-                                                        orientation: lastKnownOrientation,
-                                                        atTime: lastFinishTime)
-                } else if let lastKnownPosition {
-                    return .finishedPosition(position: lastKnownPosition, atTime: lastFinishTime)
-                } else if let lastKnownOrientation {
-                    return .finishedOrientation(orientation: lastKnownOrientation, atTime: lastFinishTime)
-                }else {
-                    return .finishedNone(atTime: lastFinishTime)
-                }
+                return .finished(atTime: lastFinishTime)
             }
 
-            if let lastKnownPosition, let lastKnownOrientation {
-                return .runningPositionOrientation(position: lastKnownPosition,
-                                                    orientation: lastKnownOrientation)
-            } else if let lastKnownPosition {
-                return .runningPosition(position: lastKnownPosition)
-            } else if let lastKnownOrientation {
-                return .runningOrientation(orientation: lastKnownOrientation)
-            }else {
-                return .runningNone
-            }
+            return .running
 
 
         }
     }
 
-}
-
-
-fileprivate extension Array {
-    func sweep<Output, Intermediate>(_ initial: Intermediate, transformer: (Intermediate, Element)-> (Intermediate, Output)) -> (Intermediate,[Output]) {
-
-        var transformedElements: [Output] = []
-        transformedElements.reserveCapacity(self.capacity)
-        var intermediate: Intermediate = initial
-        for element in self {
-            let output: Output
-            (intermediate, output) = transformer(intermediate, element)
-            transformedElements.append(output)
-        }
-
-        return (intermediate, transformedElements)
-    }
 }

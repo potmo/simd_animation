@@ -14,15 +14,15 @@ public struct Call: AnimationRig {
     }
 
     private struct Runner: AnimationRunner {
+
         private let callback: () -> Void
 
         init(callback: @escaping () -> Void ) {
             self.callback = callback
         }
-
-        func apply(at time: Double) -> AnimationResult {
+        func apply(at time: Double, setPosition: (simd_float3) -> Void, setOrientation: (simd_quatf) -> Void) -> AnimationResult {
             self.callback()
-            return .finishedNone(atTime: time)
+            return .finished(atTime: time)
         }
     }
 }

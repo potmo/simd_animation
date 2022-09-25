@@ -11,8 +11,8 @@ struct Idle: AnimationRig {
     }
 
     private struct Runner: AnimationRunner {
-        func apply(at time: Double) -> AnimationResult {
-            return .finishedNone(atTime: time)
+        func apply(at time: Double, setPosition: (simd_float3) -> Void, setOrientation: (simd_quatf) -> Void) -> AnimationResult {
+            return .finished(atTime: time)
         }
     }
 }

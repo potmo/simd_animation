@@ -66,11 +66,13 @@ class AnimatedArrow {
             Delay(duration: 1.0)
 
             InParallel{
+                LinearRotation(duration: 5, to: simd_quatf(angle: Float.pi, axis: [0,0,1]), using: .easeOut(.bounce()))
+                
                 InSequence{
                     Delay(duration: 0.5)
                     LinearTranslation(duration: 4, from: [200,100,0], to: [100,100,0], using: .easeOut(.bounce()))
                 }
-                LinearRotation(duration: 5, to: simd_quatf(angle: Float.pi, axis: [0,0,1]), using: .easeOut(.bounce()))
+
             }
             Delay(duration: 0.5)
             
