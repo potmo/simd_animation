@@ -5,7 +5,7 @@ import RealityKit
 public struct LinearRotation: AnimationRig {
 
     private let duration: Double
-    private let startOrientationProvider: () -> simd_quatf
+    private let startOrientationProvider: (() -> simd_quatf)?
     private let endOrientationProvider: () -> simd_quatf
 
     public init(duration: Double,
@@ -22,12 +22,27 @@ public struct LinearRotation: AnimationRig {
         self.init(duration: duration, from: {return startOrientatin}, to: {return endOrientation})
     }
 
+    public init(duration: Double,
+                to endOrientation: simd_quatf) {
+        self.init(duration: duration, to: {return endOrientation})
+    }
+
+    public init(duration: Double,
+                to evaluatedEndOrientation: @escaping () -> simd_quatf) {
+        self.duration = duration
+        self.startOrientationProvider = nil
+        self.endOrientationProvider = evaluatedEndOrientation
+    }
+
 
     public func create(at time: Double, with position: simd_float3, and orientation: simd_quatf) -> AnimationRunner {
+
+        let startOrientation = startOrientationProvider?() ?? orientation
+        let endOrientation = endOrientationProvider()
         return Runner(startTime: time,
                       endTime: time + duration,
-                      startOrientation: startOrientationProvider(),
-                      endOrientation: endOrientationProvider())
+                      startOrientation: startOrientation,
+                      endOrientation: endOrientation)
     }
 
     private struct Runner: AnimationRunner {
