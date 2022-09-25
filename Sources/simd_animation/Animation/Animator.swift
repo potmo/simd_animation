@@ -13,11 +13,11 @@ public class Animator {
     }
 
     public func enqueue(from position: simd_float3, and orientation: simd_quatf, _ animation: AnimationRig) {
-        // if there are already something queued we need to put that into the sequence
-        currentAnimation = InSequence(rigs: [animation]).create(at: 0, with: position, and: orientation)
+        let sequence = InSequence(rigs: [RunningAnimation(runner: currentAnimation), animation])
+        currentAnimation = sequence.create(at: Date().timeIntervalSince1970, with: position, and: orientation)
     }
 
-    public func enqueueSequence(from position: simd_float3,
+    public func enqueue(from position: simd_float3,
                                 and orientation: simd_quatf,
                                 @AnimationArrayBuilder _ builder: () -> [AnimationRig]) {
         let rigs = builder()

@@ -50,24 +50,31 @@ public struct InSequence: AnimationRig {
             switch result {
                 case .runningNone:
                     return result
+
                 case .runningPosition(let position):
                     lastKnownPosition = position
                     return result
+
                 case .runningOrientation(let orientation):
                     lastKnownOrientation = orientation
                     return result
+
                 case .runningPositionOrientation(let position, let orientation):
                     lastKnownPosition = position
                     lastKnownOrientation = orientation
                     return result
+
                 case .finishedNone(let finishTime):
                     return dequeueRunner(at: finishTime)
+
                 case .finishedPosition(let position, let finishTime):
                     lastKnownPosition = position
                     return dequeueRunner(at: finishTime)
+
                 case .finishedOrientation(let orientation, let finishTime):
                     lastKnownOrientation = orientation
                     return dequeueRunner(at: finishTime)
+
                 case .finishedPositionOrientation(let position, let orientation, let finishTime):
                     lastKnownPosition = position
                     lastKnownOrientation = orientation
@@ -88,6 +95,5 @@ public struct InSequence: AnimationRig {
             return self.apply(at: time)
         }
     }
-
 }
 
